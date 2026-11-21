@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Medicine – Smart Reminder</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f9fc;--card:#fff;--ink:#17323f;--mute:#5d7885;--line:#d9e8ee;--blue:#2f8fc4;--blueS:#e1f1fa;--green:#2e9e6b;--greenS:#dff4e8;--red:#d64545;--redS:#fbe4e4;--amber:#c98a0b;--amberS:#fcf1d3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1c23;--card:#172a34;--ink:#e6f1f6;--mute:#93abb8;--line:#27414e;--blue:#59b2e3;--blueS:#173c50;--green:#58c78f;--greenS:#17402e;--red:#f07d7d;--redS:#4a2326;--amber:#e8b64a;--amberS:#46380f}}
+:root[data-theme="dark"]{--bg:#0f1c23;--card:#172a34;--ink:#e6f1f6;--mute:#93abb8;--line:#27414e;--blue:#59b2e3;--blueS:#173c50;--green:#58c78f;--greenS:#17402e;--red:#f07d7d;--redS:#4a2326;--amber:#e8b64a;--amberS:#46380f}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 "Trebuchet MS","Segoe UI",Verdana,sans-serif}
+.wrap{max-width:640px;margin:0 auto;padding:16px 14px 90px}
+h1{font-size:1.6rem;margin:.2rem 0}h2{font-size:1.15rem;margin:1.2rem 0 .5rem}
+.sub{color:var(--mute);margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}
+.next{background:var(--blue);color:#fff;border:0}.next .sub{color:#e9f6fd}
+.big{font-size:2.4rem;font-weight:700;line-height:1.1}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:10px 14px;min-height:44px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.b-ok{background:var(--green);color:#fff;border:0;font-weight:700}.b-no{background:var(--redS);color:var(--red);border:1px solid var(--red);font-weight:700}
+.b-main{background:var(--blue);color:#fff;border:0;font-weight:700}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+label{display:block;font-size:.9rem;color:var(--mute);margin:10px 0 4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{justify-content:space-between}.grow{flex:1}
+.dose{display:flex;gap:12px;align-items:center;border-left:6px solid var(--line)}
+.dose.taken{border-color:var(--green)}.dose.missed{border-color:var(--red)}.dose.pending{border-color:var(--amber)}
+.tm{font-weight:700;min-width:78px}
+.pill{font-size:.85rem;font-weight:700;padding:3px 10px;border-radius:99px}
+.pill.taken{background:var(--greenS);color:var(--green)}.pill.missed{background:var(--redS);color:var(--red)}.pill.pending{background:var(--amberS);color:var(--amber)}
+.bar{height:14px;border-radius:9px;background:var(--blueS);overflow:hidden}.bar>i{display:block;height:100%;background:var(--green);transition:width .4s}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:var(--blueS);border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font-size:1.4rem}.stat span{font-size:.8rem;color:var(--mute)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal .h{font-weight:700;color:var(--mute);font-size:.85rem}
+.cal button{padding:2px;min-height:52px;border-radius:10px;font-size:.9rem;line-height:1.2}
+.cal button.sel{outline:3px solid var(--blue)}.cal button.today{border-color:var(--blue);border-width:2px}
+.m-taken{color:var(--green)}.m-missed{color:var(--red)}.m-pending{color:var(--amber)}.m-none{color:var(--mute)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
+nav button{flex:1;max-width:110px;border:0;background:none;font-size:.78rem;padding:6px 2px}nav button.on{background:var(--blueS);color:var(--blue);font-weight:700}
+.modal{position:fixed;inset:0;background:rgba(10,30,40,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal .card{max-width:420px;width:100%;text-align:center}
+.hide{display:none!important}
+.thumb{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--blueS)}
+textarea{min-height:90px}
+.note{font-size:.85rem;color:var(--mute)}
+@media print{nav,.noprint{display:none!important}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<nav id="nav"></nav>
+<div id="alarm" class="modal hide"></div>
+<script>
+(function(){
+var KEY="medtracker.v1";
+var S={meds:[],log:{},set:{h24:false,sound:true,notify:true}};
+try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
+var tab="today",selDate=ds(new Date()),calMonth=new Date(),editing=null,snooze={},lastRing={},report="week";
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function ds(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function pd(s){var a=s.split("-");return new Date(+a[0],+a[1]-1,+a[2])}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function fmt(t){var p=t.split(":"),h=+p[0],m=p[1];if(S.set.h24)return String(h).padStart(2,"0")+":"+m;return(h%12||12)+":"+m+" "+(h<12?"AM":"PM")}
+function medOn(m,d){return !m.paused&&m.start<=d&&(!m.end||d<=m.end)}
+function dosesFor(d){var out=[];S.meds.forEach(function(m){if(medOn(m,d))m.times.forEach(function(t){var k=d+"|"+m.id+"|"+t;out.push({k:k,m:m,t:t,date:d,rec:S.log[k]})})});return out.sort(function(a,b){return a.t<b.t?-1:1})}
+function status(x){
+ if(x.rec&&x.rec.s==="taken")return"taken";
+ if(x.rec&&x.rec.s==="missed")return"missed";
+ var today=ds(new Date());
+ if(x.date<today)return"missed";
+ return"pending"}
+function overdue(x){return x.date===ds(new Date())&&!x.rec&&x.t<nowT()}
+function nowT(){var n=new Date();return String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")}
+function mark(k,s){var p=k.split("|");S.log[k]={s:s,at:new Date().toISOString()};delete snooze[k];save();closeAlarm();render()}
+var NAMES=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function render(){
+ var el=document.getElementById("app"),h="";
+ if(tab==="today")h=vToday();else if(tab==="cal")h=vCal();else if(tab==="meds")h=vMeds();else if(tab==="rep")h=vRep();else h=vSet();
+ var keep=document.activeElement&&document.activeElement.id;
+ el.innerHTML=h;
+ document.getElementById("nav").innerHTML=[["today","Today"],["cal","Calendar"],["meds","Medicines"],["rep","Reports"],["set","Settings"]].map(function(t){return'<button data-tab="'+t[0]+'" class="'+(tab===t[0]?"on":"")+'">'+t[1]+"</button>"}).join("");
+ bind()}
+function doseRow(x,actions){
+ var st=status(x),lbl=st==="taken"?"✓ Taken":st==="missed"?"✕ Missed":(overdue(x)?"◷ Overdue":"◷ Pending");
+ var time=x.rec&&x.rec.s==="taken"?'<div class="note">Taken at '+fmt(new Date(x.rec.at).toTimeString().slice(0,5))+"</div>":"";
+ return'<div class="card dose '+st+'">'+(x.m.photo?'<img class="thumb" alt="" src="'+x.m.photo+'">':"")+'<div class="tm">'+fmt(x.t)+'</div><div class="grow"><b>'+esc(x.m.name)+"</b><div class='note'>"+esc(x.m.dose)+(x.m.instr?" · "+esc(x.m.instr):"")+"</div>"+time+'<span class="pill '+st+'">'+lbl+"</span></div>"+
+ (actions?'<div style="display:grid;gap:6px"><button class="b-ok" data-act="take" data-k="'+esc(x.k)+'">Taken</button><button class="b-no" data-act="miss" data-k="'+esc(x.k)+'">Not taken</button></div>':"")+"</div>"}
+function summary(list){var t=0,p=0,m=0;list.forEach(function(x){var s=status(x);if(s==="taken")t++;else if(s==="missed")m++;else p++});return{total:list.length,taken:t,pending:p,missed:m,pct:list.length?Math.round(t/list.length*100):0}}
+function vToday(){
+ var n=new Date(),today=ds(n),list=dosesFor(today),sm=summary(list);
+ var nxt=list.filter(function(x){return !x.rec&&x.t>=nowT()})[0]||list.filter(function(x){return !x.rec})[0];
+ var hr=n.getHours(),gr=hr<12?"Good morning":hr<18?"Good afternoon":"Good evening";
+ var h='<h1>My Medicine</h1><p class="sub">'+gr+" 👋 · "+NAMES[n.getDay()]+", "+MON[n.getMonth()]+" "+n.getDate()+", "+n.getFullYear()+' · <span id="clock">'+fmt(nowT())+"</span></p>";
+ h+='<div class="card next"><div class="sub">Next medicine reminder</div>'+(nxt?'<div><b>'+esc(nxt.m.name)+"</b> · "+esc(nxt.m.dose)+(nxt.m.instr?" · "+esc(nxt.m.instr):"")+'</div><div class="big">'+fmt(nxt.t)+"</div>":"<div>Nothing left to take today 🎉</div>")+"</div>";
+ h+='<div class="card"><div class="row sp"><b>Daily completion</b><b>'+sm.pct+'%</b></div><div class="bar"><i style="width:'+sm.pct+'%"></i></div><div class="note">'+sm.taken+" of "+sm.total+' doses completed</div></div>';
+ h+='<div class="stats"><div class="stat"><b>'+S.meds.length+"</b><span>Medicines</span></div><div class='stat'><b>"+sm.total+"</b><span>Scheduled today</span></div><div class='stat'><b class='m-taken'>"+sm.taken+"</b><span>Taken</span></div><div class='stat'><b class='m-pending'>"+sm.pending+"</b><span>Pending</span></div><div class='stat'><b class='m-missed'>"+sm.missed+"</b><span>Missed</span></div><div class='stat'><b>"+sm.pct+"%</b><span>Compliance</span></div></div>";
+ h+="<h2>Today’s medication</h2>";
+ h+=list.length?list.map(function(x){return doseRow(x,!(x.rec))}).join(""):'<div class="card">No medicine scheduled today. Open <b>Medicines</b> to add one.</div>';
+ return h}
+function dayMark(d,hasDoses){
+ var l=dosesFor(d);if(!l.length)return'<span class="m-none">–</span>';
+ var s=l.map(status);if(s.indexOf("missed")>-1)return'<span class="m-missed">✕</span>';if(s.indexOf("pending")>-1)return'<span class="m-pending">◷</span>';return'<span class="m-taken">✓</span>'}
+function vCal(){
+ var y=calMonth.getFullYear(),mo=calMonth.getMonth(),first=new Date(y,mo,1).getDay(),days=new Date(y,mo+1,0).getDate(),today=ds(new Date());
+ var h='<h1>Calendar</h1><div class="row sp"><button data-act="pm" aria-label="Previous month">‹ Prev</button><b>'+MON[mo]+" "+y+'</b><button data-act="nm" aria-label="Next month">Next ›</button></div><div class="card"><div class="cal">';
+ NAMES.forEach(function(n){h+='<div class="h">'+n[0]+"</div>"});
+ for(var i=0;i<first;i++)h+="<div></div>";
+ for(var d=1;d<=days;d++){var k=y+"-"+String(mo+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");h+='<button data-day="'+k+'" class="'+(k===selDate?"sel ":"")+(k===today?"today":"")+'">'+d+"<br>"+dayMark(k)+"</button>"}
+ h+='</div><p class="note"><span class="m-taken">✓ Taken</span> · <span class="m-missed">✕ Missed</span> · <span class="m-pending">◷ Pending</span> · <span class="m-none">– None</span></p></div>';
+ var sd=pd(selDate),l=dosesFor(selDate);
+ h+="<h2>"+NAMES[sd.getDay()]+", "+MON[sd.getMonth()]+" "+sd.getDate()+"</h2>";
+ h+=l.length?l.map(function(x){return doseRow(x,selDate<=today&&!x.rec)}).join(""):'<div class="card">No medicine scheduled on this day.</div>';
+ return h}
+function vMeds(){
+ if(editing)return vForm();
+ var h='<h1>Medicines</h1><button class="b-main" data-act="add" style="width:100%">+ Add medicine</button>';
+ h+=S.meds.length?S.meds.map(function(m){return'<div class="card"><div class="row">'+(m.photo?'<img class="thumb" alt="" src="'+m.photo+'">':"")+'<div class="grow"><b>'+esc(m.name)+"</b>"+(m.paused?' <span class="pill pending">Paused</span>':"")+'<div class="note">'+esc(m.dose)+(m.instr?" · "+esc(m.instr):"")+"</div><div class='note'>"+m.times.map(fmt).join(", ")+" · from "+m.start+(m.end?" to "+m.end:"")+"</div>"+(m.notes?"<div class='note'>"+esc(m.notes)+"</div>":"")+'</div></div><div class="row" style="margin-top:8px"><button data-act="edit" data-id="'+m.id+'">Edit</button><button data-act="pause" data-id="'+m.id+'">'+(m.paused?"Resume":"Pause")+'</button><button data-act="del" data-id="'+m.id+'">Delete</button></div></div>'}).join(""):'<div class="card">No medicines yet. Add your first one to start getting reminders.</div>';
+ return h}
+var TIMES={once:["08:00"],twice:["08:00","20:00"],thrice:["08:00","14:00","20:00"]};
+function vForm(){
+ var m=editing,h="<h1>"+(m._new?"Add medicine":"Edit medicine")+'</h1><div class="card">';
+ h+='<label for="f_name">Medicine name</label><input id="f_name" value="'+esc(m.name)+'">';
+ h+='<label for="f_photo">Photo (optional)</label><input id="f_photo" type="file" accept="image/*">'+(m.photo?'<img class="thumb" alt="" src="'+m.photo+'">':"");
+ h+='<label for="f_dose">Dosage (e.g. 1 tablet, 500mg)</label><input id="f_dose" value="'+esc(m.dose)+'">';
+ h+='<label for="f_instr">Instructions</label><select id="f_instr">'+["","Before meal","After meal","With meal"].map(function(o){return"<option"+(o===m.instr?" selected":"")+">"+o+"</option>"}).join("")+"</select>";
+ h+='<label for="f_start">Start date</label><input id="f_start" type="date" value="'+m.start+'"><label for="f_end">End date (optional)</label><input id="f_end" type="date" value="'+(m.end||"")+'">';
+ h+='<label for="f_freq">Frequency</label><select id="f_freq">'+[["once","Once daily"],["twice","Twice daily"],["thrice","Three times daily"],["custom","Custom"]].map(function(o){return'<option value="'+o[0]+'"'+(o[0]===m.freq?" selected":"")+">"+o[1]+"</option>"}).join("")+"</select>";
+ h+="<label>Reminder times</label>"+m.times.map(function(t,i){return'<div class="row" style="margin-bottom:6px"><input class="f_time grow" type="time" value="'+t+'" aria-label="Reminder time '+(i+1)+'">'+(m.freq==="custom"&&m.times.length>1?'<button data-act="rmt" data-i="'+i+'">Remove</button>':"")+"</div>"}).join("")+(m.freq==="custom"?'<button data-act="addt">+ Add time</button>':"");
+ h+='<label for="f_notes">Additional notes</label><textarea id="f_notes">'+esc(m.notes)+"</textarea>";
+ h+='<div class="row" style="margin-top:14px"><button class="b-main grow" data-act="saveMed">Save</button><button data-act="cancel">Cancel</button></div><p id="ferr" class="m-missed"></p></div>';
+ return h}
+function readForm(){var m=editing;m.name=val("f_name");m.dose=val("f_dose");m.instr=val("f_instr");m.start=val("f_start");m.end=val("f_end");m.notes=val("f_notes");m.freq=val("f_freq");
+ var ts=[].map.call(document.querySelectorAll(".f_time"),function(i){return i.value}).filter(Boolean);m.times=ts.length?ts:m.times}
+function val(id){var e=document.getElementById(id);return e?e.value.trim():""}
+function inRange(d){var n=new Date(),from=new Date(n.getFullYear(),n.getMonth(),n.getDate()-(report==="day"?0:report==="week"?6:29)),a=[];
+ for(var x=new Date(from);x<=n;x.setDate(x.getDate()+1))a.push(ds(x));return a}
+function vRep(){
+ var days=inRange(),all=[];days.forEach(function(d){dosesFor(d).forEach(function(x){all.push(x)})});var sm=summary(all);
+ var h='<h1>Reports</h1><div class="row noprint">'+[["day","Daily"],["week","Weekly"],["month","Monthly"]].map(function(r){return'<button data-rep="'+r[0]+'" class="'+(report===r[0]?"b-main":"")+'">'+r[1]+"</button>"}).join('')+'</div>';
+ h+='<div class="card"><b>Medication adherence report</b><div class="note">'+days[0]+" to "+days[days.length-1]+'</div><div class="big">'+sm.pct+'%</div><div class="bar"><i style="width:'+sm.pct+'%"></i></div><p>Taken: <b class="m-taken">'+sm.taken+'</b> · Missed: <b class="m-missed">'+sm.missed+'</b> · Pending: <b class="m-pending">'+sm.pending+"</b></p></div>";
+ h+=days.slice().reverse().map(function(d){var l=dosesFor(d);if(!l.length)return"";return'<div class="card"><b>'+d+"</b>"+l.map(function(x){var s=status(x);return"<div>"+(s==="taken"?'<span class="m-taken">✓</span>':s==="missed"?'<span class="m-missed">✕</span>':'<span class="m-pending">◷</span>')+" "+fmt(x.t)+" · "+esc(x.m.name)+(x.rec&&x.rec.s==="taken"?' <span class="note">(taken at '+fmt(new Date(x.rec.at).toTimeString().slice(0,5))+")</span>":"")+"</div>"}).join("")+"</div>"}).join("");
+ h+='<button class="b-main noprint" data-act="print" style="width:100%">Export as PDF</button><p class="note noprint">Choose “Save as PDF” in the print dialog.</p>';return h}
+function vSet(){
+ return'<h1>Settings</h1><div class="card"><label for="s_h">Time format</label><select id="s_h"><option value="12"'+(S.set.h24?"":" selected")+'>12-hour</option><option value="24"'+(S.set.h24?" selected":"")+'>24-hour</option></select>'+
+ '<label><input type="checkbox" id="s_snd" style="width:auto"'+(S.set.sound?" checked":"")+'> Alarm sound</label><label><input type="checkbox" id="s_not" style="width:auto"'+(S.set.notify?" checked":"")+'> Notifications</label>'+
+ '<div class="row" style="margin-top:10px"><button data-act="perm">Allow notifications</button><button data-act="test">Test alarm</button></div><p class="note" id="permnote">'+permText()+'</p></div>'+
+ '<h2>Backup &amp; restore</h2><div class="card"><button data-act="backup">Create backup</button><textarea id="s_bk" placeholder="Backup text appears here. To restore, paste it here and tap Restore."></textarea><button data-act="restore" style="margin-top:8px">Restore</button></div>'+
+ '<div class="card note"><b>About alarms:</b> this web app can only ring while it is open (in a browser tab or added to your home screen). When the browser is closed or the phone is locked, alarms may be delayed or may not fire. For lock-screen alarms, use a native Android or iPhone app.</div>'}
+function permText(){return"Notifications: "+(("Notification" in window)?Notification.permission:"not supported on this device")}
+
+/* alarm */
+var actx=null,ringTimer=null;
+function beep(){if(!S.set.sound)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();[0,.35,.7].forEach(function(o){var os=actx.createOscillator(),g=actx.createGain();os.frequency.value=880;g.gain.value=.2;os.connect(g);g.connect(actx.destination);os.start(actx.currentTime+o);os.stop(actx.currentTime+o+.2)})}catch(e){}}
+function showAlarm(x){
+ var a=document.getElementById("alarm");
+ a.innerHTML='<div class="card" role="alertdialog" aria-label="Medicine reminder"><div class="big">⏰ '+fmt(x.t)+"</div><h2>"+esc(x.m.name)+"</h2><p>"+esc(x.m.dose)+(x.m.instr?" · "+esc(x.m.instr):"")+'</p><div style="display:grid;gap:8px"><button class="b-ok" data-act="take" data-k="'+esc(x.k)+'">✓ Taken</button><div class="row"><button class="grow" data-act="snz" data-k="'+esc(x.k)+'" data-m="5">Snooze 5 min</button><button class="grow" data-act="snz" data-k="'+esc(x.k)+'" data-m="10">Snooze 10 min</button></div></div></div>';
+ a.classList.remove("hide");bindAlarm();clearInterval(ringTimer);beep();ringTimer=setInterval(beep,4000)}
+function closeAlarm(){clearInterval(ringTimer);var a=document.getElementById("alarm");a.classList.add("hide");a.innerHTML=""}
+function notifyOS(x){if(!S.set.notify||!("Notification" in window)||Notification.permission!=="granted")return;try{new Notification("Time for "+x.m.name,{body:x.m.dose+" · "+fmt(x.t)})}catch(e){}}
+function tick(){
+ var n=Date.now(),today=ds(new Date()),c=document.getElementById("clock");if(c)c.textContent=fmt(nowT());
+ var due=dosesFor(today).filter(function(x){if(x.rec)return false;var p=x.t.split(":"),when=new Date();when.setHours(+p[0],+p[1],0,0);var base=snooze[x.k]||when.getTime();return n>=base&&n-when.getTime()<6*3600000});
+ if(due.length&&document.getElementById("alarm").classList.contains("hide")){var x=due[0];if(!lastRing[x.k]||n-lastRing[x.k]>120000){lastRing[x.k]=n;notifyOS(x);showAlarm(x)}}}
+setInterval(tick,15000);
+
+/* events */
+function bind(){
+ [].forEach.call(document.querySelectorAll("[data-tab]"),function(b){b.onclick=function(){tab=b.dataset.tab;editing=null;render();window.scrollTo(0,0)}});
+ [].forEach.call(document.querySelectorAll("#app [data-act]"),function(b){b.onclick=function(){act(b)}});
+ [].forEach.call(document.querySelectorAll("[data-day]"),function(b){b.onclick=function(){selDate=b.dataset.day;render()}});
+ [].forEach.call(document.querySelectorAll("[data-rep]"),function(b){b.onclick=function(){report=b.dataset.rep;render()}});
+ var f=document.getElementById("f_freq");if(f)f.onchange=function(){readForm();if(editing.freq!=="custom")editing.times=TIMES[editing.freq].slice();render()};
+ var p=document.getElementById("f_photo");if(p)p.onchange=function(){var file=p.files[0];if(!file)return;readForm();var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var c=document.createElement("canvas");c.width=c.height=96;var g=c.getContext("2d"),s=Math.min(im.width,im.height);g.drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,96,96);editing.photo=c.toDataURL("image/jpeg",.7);render()};im.src=r.result};r.readAsDataURL(file)};
+ var sh=document.getElementById("s_h");if(sh)sh.onchange=function(){S.set.h24=sh.value==="24";save();render()};
+ var ss=document.getElementById("s_snd");if(ss)ss.onchange=function(){S.set.sound=ss.checked;save()};
+ var sn=document.getElementById("s_not");if(sn)sn.onchange=function(){S.set.notify=sn.checked;save()}}
+function bindAlarm(){[].forEach.call(document.querySelectorAll("#alarm [data-act]"),function(b){b.onclick=function(){act(b)}})}
+function act(b){var a=b.dataset.act,id=b.dataset.id;
+ if(a==="take")mark(b.dataset.k,"taken");
+ else if(a==="miss")mark(b.dataset.k,"missed");
+ else if(a==="snz"){snooze[b.dataset.k]=Date.now()+(+b.dataset.m)*60000;lastRing[b.dataset.k]=0;closeAlarm()}
+ else if(a==="pm"){calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()-1,1);render()}
+ else if(a==="nm"){calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,1);render()}
+ else if(a==="add"){editing={_new:1,id:"m"+Date.now(),name:"",dose:"",instr:"",start:ds(new Date()),end:"",freq:"once",times:["08:00"],notes:"",photo:"",paused:false};render()}
+ else if(a==="edit"){editing=JSON.parse(JSON.stringify(S.meds.filter(function(m){return m.id===id})[0]));render()}
+ else if(a==="pause"){S.meds.forEach(function(m){if(m.id===id)m.paused=!m.paused});save();render()}
+ else if(a==="del"){if(confirm("Delete this medicine and its schedule?")){S.meds=S.meds.filter(function(m){return m.id!==id});save();render()}}
+ else if(a==="cancel"){editing=null;render()}
+ else if(a==="addt"){readForm();editing.times.push("12:00");render()}
+ else if(a==="rmt"){readForm();editing.times.splice(+b.dataset.i,1);render()}
+ else if(a==="saveMed"){readForm();var m=editing,err="";
+  var uniq=m.times.filter(function(t,i){return m.times.indexOf(t)===i});
+  if(!m.name)err="Enter the medicine name.";else if(!m.dose)err="Enter the dosage.";else if(!m.start)err="Choose a start date.";else if(m.end&&m.end<m.start)err="End date must be after the start date.";
+  else if(S.meds.some(function(o){return o.id!==m.id&&o.name.toLowerCase()===m.name.toLowerCase()&&o.dose.toLowerCase()===m.dose.toLowerCase()&&o.times.join()===uniq.sort().join()}))err="This medicine with the same dose and times already exists.";
+  if(err){document.getElementById("ferr").textContent=err;return}
+  m.times=uniq.sort();var isNew=m._new;delete m._new;if(isNew)S.meds.push(m);else S.meds=S.meds.map(function(o){return o.id===m.id?m:o});editing=null;save();render()}
+ else if(a==="print")window.print();
+ else if(a==="perm"){if("Notification" in window)Notification.requestPermission().then(function(){document.getElementById("permnote").textContent=permText()});else document.getElementById("permnote").textContent=permText()}
+ else if(a==="test"){showAlarm({k:"test",t:nowT(),m:{name:"Test medicine",dose:"1 tablet",instr:"After meal"}})}
+ else if(a==="backup"){document.getElementById("s_bk").value=JSON.stringify(S);document.getElementById("s_bk").select()}
+ else if(a==="restore"){try{var d=JSON.parse(document.getElementById("s_bk").value);if(!d.meds||!d.log)throw 0;S=Object.assign(S,d);save();alert("Backup restored.");render()}catch(e){alert("That backup text is not valid.")}}}
+render();tick();
+})();
+</script>
+</body>
+</html>
